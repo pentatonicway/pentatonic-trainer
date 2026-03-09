@@ -7,6 +7,8 @@ export type FretboardProps = {
   scaleDegreeVisibility: Record<ScaleDegree, boolean>
   width?: number
   height?: number
+  startFret?: number
+  themeKey?: 'dark' | 'light'
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -39,11 +41,44 @@ const DEGREE_LABELS: Record<ScaleDegree, string> = {
   '7':  'Major 7th',
 }
 
+// String names from top (high e) to bottom (low E)
+const STRING_NAMES = ['e', 'B', 'G', 'D', 'A', 'E']
+
 const NUM_STRINGS = 6
+const WINDOW_SIZE = 8
+const FRET_MARKERS = new Set([3, 5, 7, 9, 12, 15, 17, 19, 21])
+const DOUBLE_MARKERS = new Set([12, 24])
+
+// ─── Theme configs ────────────────────────────────────────────────────────────
+
+const LIGHT_FB = {
+  boardBg: '#F5E6C8',        // warm wood tone
+  boardBg2: '#EDD9A3',       // second gradient stop
+  fretLine: '#8B7355',       // dark wood fret lines
+  firstFretLine: '#5C4A2A',  // darker nut
+  string: '#8B7355',         // warm string color
+  marker: '#8B7355',
+  markerOpacity: 0.25,
+  fretLabel: '#8B7355',
+  stringLabel: '#8B7355',
+  dotStroke: 'rgba(0,0,0,0.15)',
+}
+
+const DARK_FB = {
+  boardBg: '#1e2535',
+  boardBg2: '#1a2035',
+  fretLine: '#CBD5E0',
+  firstFretLine: '#A0AEC0',
+  string: '#718096',
+  marker: '#4A5568',
+  markerOpacity: 0.4,
+  fretLabel: '#718096',
+  stringLabel: '#718096',
+  dotStroke: 'rgba(255,255,255,0.1)',
+}
 
 // ─── Layout helpers ──────────────────────────────────────────────────────────
 
-/** Collect every fret number that appears across all strings. */
 function getShapeFrets(shape: ShapeData): number[] {
   const frets = new Set<number>()
   for (const str of shape.strings) {
@@ -54,21 +89,17 @@ function getShapeFrets(shape: ShapeData): number[] {
   return Array.from(frets).sort((a, b) => a - b)
 }
 
-/**
- * Build the ordered list of fret slots to render.
- * We show: min(shapeFrets)-1  …  max(shapeFrets)+1
- * with a minimum window of 5 slots.
- */
 function buildFretWindow(shapeFrets: number[]): number[] {
-  if (shapeFrets.length === 0) return [0, 1, 2, 3, 4]
-
-  const min = Math.max(0, shapeFrets[0] - 1)
-  const max = shapeFrets[shapeFrets.length - 1] + 1
+  if (shapeFrets.length === 0) return [1, 2, 3, 4, 5, 6, 7, 8]
+  const hasOpenStrings = shapeFrets.includes(0)
+  const min = shapeFrets[0]
+  const max = shapeFrets[shapeFrets.length - 1]
+  const center = Math.round((min + max) / 2)
+  let start = center - Math.floor(WINDOW_SIZE / 2)
+  const floor = hasOpenStrings ? 0 : 1
+  if (start < floor) start = floor
   const raw: number[] = []
-  for (let f = min; f <= max; f++) raw.push(f)
-
-  // Pad to at least 5 slots
-  while (raw.length < 5) raw.push(raw[raw.length - 1] + 1)
+  for (let f = start; f < start + WINDOW_SIZE; f++) raw.push(f)
   return raw
 }
 
@@ -78,50 +109,50 @@ export function Fretboard({
   shape,
   scaleDegreeVisibility,
   width = 300,
-  height = 180,
+  height = 160,
+  startFret,
+  themeKey = 'dark',
 }: FretboardProps) {
-  const shapeFrets = getShapeFrets(shape)
-  const fretWindow = buildFretWindow(shapeFrets)
-  const showNut = fretWindow.includes(0)
+  const fb = themeKey === 'light' ? LIGHT_FB : DARK_FB
 
-  // Layout margins
-  const marginTop    = 20
-  const marginBottom = 30   // room for fret numbers
-  const marginLeft   = showNut ? 24 : 16
-  const marginRight  = 16
+  const shapeFrets = getShapeFrets(shape)
+  const autoWindow = buildFretWindow(shapeFrets)
+  const fretWindow = startFret !== undefined
+    ? Array.from({ length: WINDOW_SIZE }, (_, i) => startFret + i)
+    : autoWindow
+
+  // Layout margins — leave room on left for string labels
+  const marginTop    = 16
+  const marginBottom = 24
+  const marginLeft   = 28   // wider for string labels
+  const marginRight  = 8
 
   const boardWidth  = width  - marginLeft - marginRight
   const boardHeight = height - marginTop  - marginBottom
 
-  // Number of fret *slots* (spaces between fret lines) = fretWindow.length - 1
-  // We render fretWindow.length+1 vertical lines: one before first fret and after last
-  // Actually: fretWindow contains fret numbers. We render vertical lines AT each fret position.
-  // Slot width = boardWidth / (fretWindow.length - 1) when there are N frets → N-1 gaps
-  const numSlots = Math.max(fretWindow.length - 1, 1)
-  const slotWidth = boardWidth / numSlots
-
-  // String spacing
+  const numSlots    = WINDOW_SIZE
+  const slotWidth   = boardWidth / numSlots
   const stringSpacing = boardHeight / (NUM_STRINGS - 1)
 
-  // Map fret number → x coordinate
   function fretX(fretNum: number): number {
     const idx = fretWindow.indexOf(fretNum)
     return marginLeft + idx * slotWidth
   }
 
-  // Map string number (1=top, 6=bottom) → y coordinate
   function stringY(stringNumber: number): number {
-    // string 1 = top (marginTop), string 6 = bottom (marginTop + boardHeight)
     return marginTop + (stringNumber - 1) * stringSpacing
   }
 
-  // String stroke widths — string 6 (low E) is thickest
   function stringStrokeWidth(stringNumber: number): number {
-    // string 1 = 0.8, string 6 = 2.4 — linear
-    return 0.8 + ((stringNumber - 1) / (NUM_STRINGS - 1)) * 1.6
+    return 0.6 + ((stringNumber - 1) / (NUM_STRINGS - 1)) * 1.8
   }
 
-  const dotRadius = Math.min(slotWidth, stringSpacing) * 0.35
+  function slotCenterX(fretNum: number): number {
+    return fretX(fretNum) + slotWidth / 2
+  }
+
+  const dotRadius = Math.min(slotWidth, stringSpacing) * 0.36
+  const gradId = `fbGrad-${shape.label.replace(/\s/g, '')}`
 
   return (
     <svg
@@ -131,31 +162,35 @@ export function Fretboard({
       role="img"
       aria-label={`Guitar fretboard: ${shape.label}`}
     >
-      {/* ── Nut ─────────────────────────────────────────────── */}
-      {showNut && (
-        <line
-          x1={marginLeft}
-          y1={marginTop}
-          x2={marginLeft}
-          y2={marginTop + boardHeight}
-          stroke="#1A202C"
-          strokeWidth={4}
-          strokeLinecap="round"
-        />
-      )}
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={fb.boardBg} />
+          <stop offset="100%" stopColor={fb.boardBg2} />
+        </linearGradient>
+      </defs>
+
+      {/* ── Board background ────────────────────────────────── */}
+      <rect
+        x={marginLeft}
+        y={marginTop}
+        width={boardWidth}
+        height={boardHeight}
+        fill={`url(#${gradId})`}
+        rx={2}
+      />
 
       {/* ── Fret lines ──────────────────────────────────────── */}
-      {fretWindow.map(fretNum => {
-        const x = fretX(fretNum)
+      {[...fretWindow, fretWindow[fretWindow.length - 1] + 1].map((_, idx) => {
+        const x = marginLeft + idx * slotWidth
+        const isFirst = idx === 0
         return (
           <line
-            key={`fret-${fretNum}`}
-            x1={x}
-            y1={marginTop}
-            x2={x}
-            y2={marginTop + boardHeight}
-            stroke="#CBD5E0"
-            strokeWidth={1}
+            key={`fret-line-${idx}`}
+            x1={x} y1={marginTop}
+            x2={x} y2={marginTop + boardHeight}
+            stroke={isFirst ? fb.firstFretLine : fb.fretLine}
+            strokeWidth={isFirst ? 3 : 1}
+            opacity={isFirst ? 1 : 0.5}
           />
         )
       })}
@@ -166,30 +201,70 @@ export function Fretboard({
         return (
           <line
             key={`string-${stringNum}`}
-            x1={marginLeft}
-            y1={y}
-            x2={marginLeft + boardWidth}
-            y2={y}
-            stroke="#718096"
+            x1={marginLeft} y1={y}
+            x2={marginLeft + boardWidth} y2={y}
+            stroke={fb.string}
             strokeWidth={stringStrokeWidth(stringNum)}
+            opacity={0.7}
             data-testid={`string-line-${stringNum}`}
           />
         )
       })}
 
+      {/* ── String labels (left side) ───────────────────────── */}
+      {Array.from({ length: NUM_STRINGS }, (_, i) => i + 1).map(stringNum => {
+        const y = stringY(stringNum)
+        const label = STRING_NAMES[stringNum - 1]
+        return (
+          <text
+            key={`string-label-${stringNum}`}
+            x={marginLeft - 6}
+            y={y}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fontSize={9}
+            fill={fb.stringLabel}
+            fontWeight="600"
+            fontFamily="monospace"
+            opacity={0.8}
+          >
+            {label}
+          </text>
+        )
+      })}
+
+      {/* ── Fret position markers ────────────────────────────── */}
+      {fretWindow.map(fretNum => {
+        if (!FRET_MARKERS.has(fretNum)) return null
+        const x = slotCenterX(fretNum)
+        const midY = marginTop + boardHeight / 2
+        const isDouble = DOUBLE_MARKERS.has(fretNum)
+        return (
+          <g key={`marker-${fretNum}`}>
+            {isDouble ? (
+              <>
+                <circle cx={x} cy={midY - stringSpacing} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
+                <circle cx={x} cy={midY + stringSpacing} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
+              </>
+            ) : (
+              <circle cx={x} cy={midY} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
+            )}
+          </g>
+        )
+      })}
+
       {/* ── Fret number labels ──────────────────────────────── */}
       {fretWindow.map(fretNum => {
-        if (fretNum === 0) return null // no label for open string / nut position
-        const x = fretX(fretNum) - slotWidth / 2
-        const y = height - marginBottom + 14
+        const x = slotCenterX(fretNum)
+        const y = height - 6
         return (
           <text
             key={`fret-label-${fretNum}`}
-            x={x}
-            y={y}
+            x={x} y={y}
             textAnchor="middle"
-            fontSize={10}
-            fill="#718096"
+            fontSize={9}
+            fill={fb.fretLabel}
+            opacity={0.8}
           >
             {fretNum}
           </text>
@@ -199,40 +274,43 @@ export function Fretboard({
       {/* ── Dots ────────────────────────────────────────────── */}
       {shape.strings.map(guitarString =>
         guitarString.dots.map(dot => {
-          const cx = fretX(dot.fret) - slotWidth / 2
+          if (!fretWindow.includes(dot.fret)) return null
+
+          const cx = slotCenterX(dot.fret)
           const cy = stringY(guitarString.stringNumber)
           const color = DEGREE_COLORS[dot.degree]
           const visible = scaleDegreeVisibility[dot.degree]
-          const opacity = visible ? 1 : 0.2
           const ariaLabel = `String ${guitarString.stringNumber}, Fret ${dot.fret}, ${DEGREE_LABELS[dot.degree]}`
+          // Show "R" for root instead of "1"
+          const label = dot.degree === '1' ? 'R' : dot.degree
 
           return (
             <g
               key={`dot-${guitarString.stringNumber}-${dot.fret}`}
-              opacity={opacity}
               aria-label={ariaLabel}
               role="img"
               data-testid={`dot-${guitarString.stringNumber}-${dot.fret}`}
               data-degree={dot.degree}
             >
               <circle
-                cx={cx}
-                cy={cy}
-                r={dotRadius}
-                fill={color}
+                cx={cx} cy={cy} r={dotRadius}
+                fill={visible ? color : '#222222'}
+                stroke={fb.dotStroke}
+                strokeWidth={1}
               />
-              <text
-                x={cx}
-                y={cy + 1}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={dotRadius * 0.9}
-                fill="white"
-                fontWeight="bold"
-                style={{ userSelect: 'none', pointerEvents: 'none' }}
-              >
-                {dot.degree}
-              </text>
+              {visible && (
+                <text
+                  x={cx} y={cy + 0.5}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={dotRadius * 1.0}
+                  fill="white"
+                  fontWeight="bold"
+                  style={{ userSelect: 'none', pointerEvents: 'none' }}
+                >
+                  {label}
+                </text>
+              )}
             </g>
           )
         })

@@ -1,92 +1,82 @@
-import type { ChordQuality, OverrideRule } from '../types'
-import { getBaseShapes } from '../constants/shapes'
-import { transposeShape } from './transpose'
-
-// The "A" root used for all base shape definitions
-const BASE_ROOT = 'A' as const
+import type { ChordQuality, NoteRoot, OverrideRule } from "../types";
+import { getBaseShapes } from "../constants/shapes";
+import { getIntervalSigned, transposeShape } from "./transpose";
 
 /** Parameters shared by all shape-selection functions. */
 export interface ShapeSelectorParams {
-  quality: ChordQuality
-  box1ShapeIndex: number
-  intervalFromBox1: number
+  quality: ChordQuality;
+  chordRoot: NoteRoot; // the actual chord root (used to transpose from A)
+  box1ShapeIndex: number;
+  intervalFromBox1: number; // kept for override key lookup
+  box1BaseFret: number; // actual transposed baseFret of Box 1 on the neck
 }
 
 /**
- * Returns the best shape index (0–4) for a box given the quality, the
- * reference shape index from Box 1, and the semitone interval from Box 1's
- * root to this box's root.
+ * Returns the best shape index (0–4) for a box.
  *
  * Strategy:
- *  1. Transpose every candidate shape by `intervalFromBox1` semitones.
- *  2. Compare each candidate's resulting baseFret against the Box 1
- *     shape's baseFret (un-transposed — Box 1 anchors the neck region).
- *  3. Prefer candidates within ±8 frets; if none qualify, fall back to
- *     the nearest regardless of distance.
+ *  1. Transpose each candidate shape from its A-root definition to its actual
+ *     chord root using the signed shortest-path interval.
+ *  2. Octave-wrap the resulting baseFret to land closest to box1BaseFret.
+ *  3. Pick the candidate with the smallest distance to box1BaseFret.
  *  4. Ties broken by lower index.
  */
 export function getDefaultShapeIndex({
   quality,
-  box1ShapeIndex,
-  intervalFromBox1,
+  chordRoot,
+  box1BaseFret,
 }: ShapeSelectorParams): number {
-  const shapes = getBaseShapes(quality)
-  const box1BaseFret = shapes[box1ShapeIndex].baseFret
+  const shapes = getBaseShapes(quality);
+  const target = box1BaseFret;
 
-  // Build (index, transposedBaseFret) pairs
   const candidates = shapes.map((shape, idx) => {
-    const transposed = transposeShape(shape, intervalFromBox1)
-    return { idx, transposedBaseFret: transposed.baseFret }
-  })
+    const semitones = getIntervalSigned("A", chordRoot);
+    const transposed = transposeShape(shape, semitones);
 
-  const WINDOW = 8
+    // Use the midpoint of actual dot frets as the representative position
+    const dotFrets = transposed.strings.flatMap((s) =>
+      s.dots.map((d) => d.fret)
+    );
+    const dotMin = Math.min(...dotFrets);
+    const dotMax = Math.max(...dotFrets);
+    const mid = Math.round((dotMin + dotMax) / 2);
 
-  // Score each candidate: distance from box1BaseFret, within window or not
-  let best: { idx: number; dist: number; inWindow: boolean } | null = null
+    // Consider natural position AND octave up/down — pick whichever octave
+    // brings the shape closest to the target fret region
+    const dist = Math.min(
+      Math.abs(mid - target),
+      Math.abs(mid + 12 - target),
+      Math.abs(mid - 12 - target)
+    );
 
-  for (const { idx, transposedBaseFret } of candidates) {
-    const dist = Math.abs(transposedBaseFret - box1BaseFret)
-    const inWindow = dist <= WINDOW
+    return { idx, dist };
+  });
 
-    if (best === null) {
-      best = { idx, dist, inWindow }
-      continue
-    }
-
-    // Prefer in-window over out-of-window
-    if (inWindow && !best.inWindow) {
-      best = { idx, dist, inWindow }
-      continue
-    }
-    if (!inWindow && best.inWindow) {
-      continue
-    }
-
-    // Same window status: prefer smaller distance, then lower index
-    if (dist < best.dist || (dist === best.dist && idx < best.idx)) {
-      best = { idx, dist, inWindow }
+  let best: { idx: number; dist: number } | null = null;
+  for (const { idx, dist } of candidates) {
+    if (
+      best === null ||
+      dist < best.dist ||
+      (dist === best.dist && idx < best.idx)
+    ) {
+      best = { idx, dist };
     }
   }
 
-  // best is never null because shapes always has 5 entries
-  return best!.idx
+  return best!.idx;
 }
 
 /**
- * Builds the canonical rule key for the given params and searches the
- * overrides array for a match.
- *
+ * Builds the canonical rule key and searches overrides for a match.
  * Key format: `"<quality>|<box1ShapeIndex>|<intervalFromBox1>"`
- *
- * Returns the override shapeIndex if found, otherwise null.
  */
 export function applyOverride(
   { quality, box1ShapeIndex, intervalFromBox1 }: ShapeSelectorParams,
-  overrides: OverrideRule[],
+  overrides: OverrideRule[]
 ): number | null {
-  const key = `${quality}|${box1ShapeIndex}|${intervalFromBox1}`
-  const match = overrides.find(rule => rule.key === key)
-  return match !== undefined ? match.shapeIndex : null
+  const key = `${quality}|${box1ShapeIndex}|${intervalFromBox1}`;
+  const match = overrides.find((rule) => rule.key === key);
+  return match !== undefined ? match.shapeIndex : null;
 }
 
 /**
@@ -96,9 +86,9 @@ export function applyOverride(
  */
 export function resolveShapeIndex(
   params: ShapeSelectorParams,
-  overrides: OverrideRule[],
+  overrides: OverrideRule[]
 ): number {
-  const overrideResult = applyOverride(params, overrides)
-  if (overrideResult !== null) return overrideResult
-  return getDefaultShapeIndex(params)
+  const overrideResult = applyOverride(params, overrides);
+  if (overrideResult !== null) return overrideResult;
+  return getDefaultShapeIndex(params);
 }

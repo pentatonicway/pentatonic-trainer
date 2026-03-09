@@ -1,5 +1,5 @@
-import type { NoteRoot, ShapeData } from '../types'
-import { CHROMATIC_SCALE, normalizeNote } from '../constants/notes'
+import type { NoteRoot, ShapeData } from "../types";
+import { CHROMATIC_SCALE, normalizeNote } from "../constants/notes";
 
 /**
  * Returns the number of semitones from `from` to `to` (0–11, always positive,
@@ -11,9 +11,9 @@ import { CHROMATIC_SCALE, normalizeNote } from '../constants/notes'
  *   getInterval("A", "A")  → 0
  */
 export function getInterval(from: NoteRoot, to: NoteRoot): number {
-  const fromIdx = CHROMATIC_SCALE.indexOf(normalizeNote(from))
-  const toIdx   = CHROMATIC_SCALE.indexOf(normalizeNote(to))
-  return (toIdx - fromIdx + 12) % 12
+  const fromIdx = CHROMATIC_SCALE.indexOf(normalizeNote(from));
+  const toIdx = CHROMATIC_SCALE.indexOf(normalizeNote(to));
+  return (toIdx - fromIdx + 12) % 12;
 }
 
 /**
@@ -26,9 +26,9 @@ export function getInterval(from: NoteRoot, to: NoteRoot): number {
  *   transposeNote("A", -1) → "G#"
  */
 export function transposeNote(note: NoteRoot, semitones: number): NoteRoot {
-  const idx = CHROMATIC_SCALE.indexOf(normalizeNote(note))
-  const newIdx = ((idx + semitones) % 12 + 12) % 12
-  return CHROMATIC_SCALE[newIdx] as NoteRoot
+  const idx = CHROMATIC_SCALE.indexOf(normalizeNote(note));
+  const newIdx = (((idx + semitones) % 12) + 12) % 12;
+  return CHROMATIC_SCALE[newIdx] as NoteRoot;
 }
 
 /**
@@ -41,38 +41,48 @@ export function transposeNote(note: NoteRoot, semitones: number): NoteRoot {
  */
 export function transposeShape(shape: ShapeData, semitones: number): ShapeData {
   // Collect all fret values to check for underflow
-  const allFrets = shape.strings.flatMap(s => s.dots.map(d => d.fret))
-  const minFret  = Math.min(...allFrets)
+  const allFrets = shape.strings.flatMap((s) => s.dots.map((d) => d.fret));
+  const minFret = Math.min(...allFrets);
 
   // If the shift would take any fret below 0, add an octave first
-  const octaveCorrection = minFret + semitones < 0 ? 12 : 0
-  const totalShift = semitones + octaveCorrection
+  const octaveCorrection = minFret + semitones < 0 ? 12 : 0;
+  const totalShift = semitones + octaveCorrection;
 
   return {
     ...shape,
     baseFret: shape.baseFret + totalShift,
-    strings: shape.strings.map(str => ({
+    strings: shape.strings.map((str) => ({
       ...str,
-      dots: str.dots.map(dot => ({
+      dots: str.dots.map((dot) => ({
         ...dot,
         fret: dot.fret + totalShift,
       })),
     })),
-  }
+  };
+}
+
+/**
+ * Returns the signed shortest-path interval from `from` to `to` (-6 to +6).
+ * Used for rendering shapes at their actual neck position — avoids jumping
+ * an octave up when going down a few semitones (e.g. A→G = -2, not +10).
+ */
+export function getIntervalSigned(from: NoteRoot, to: NoteRoot): number {
+  const raw = getInterval(from, to);
+  return raw > 6 ? raw - 12 : raw;
 }
 
 /**
  * Transposes a shape from one root note to another.
- * Calculates the semitone interval from `fromRoot` to `toRoot` and applies
- * `transposeShape` with that interval.
+ * Uses the signed shortest-path interval so shapes stay in their natural
+ * neck region rather than jumping an octave up.
  *
  * This is the primary function for rendering a shape at a given chord root.
  */
 export function transposeShapeToRoot(
   shape: ShapeData,
   fromRoot: NoteRoot,
-  toRoot: NoteRoot,
+  toRoot: NoteRoot
 ): ShapeData {
-  const semitones = getInterval(fromRoot, toRoot)
-  return transposeShape(shape, semitones)
+  const semitones = getIntervalSigned(fromRoot, toRoot);
+  return transposeShape(shape, semitones);
 }
