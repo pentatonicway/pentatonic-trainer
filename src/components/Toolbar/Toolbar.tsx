@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef } from 'react'
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type ToolbarProps = {
@@ -5,6 +7,10 @@ export type ToolbarProps = {
   neckPosition: number
   onNeckUp: () => void
   onNeckDown: () => void
+  // Transpose
+  currentKey: string
+  onTransposeUp: () => void
+  onTransposeDown: () => void
   // Cards count
   cardCount: number
   onSetCardCount: (n: number) => void
@@ -21,6 +27,7 @@ export type ToolbarProps = {
 }
 
 const CARD_OPTIONS = [2, 4, 8, 12, 16]
+const COLLAPSE_WIDTH = 700
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -28,6 +35,9 @@ export function Toolbar({
   neckPosition,
   onNeckUp,
   onNeckDown,
+  currentKey,
+  onTransposeUp,
+  onTransposeDown,
   cardCount,
   onSetCardCount,
   onOpenPopular,
@@ -38,16 +48,39 @@ export function Toolbar({
   themeKey = 'dark',
 }: ToolbarProps) {
   const isLight = themeKey === 'light'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Track window width for hamburger collapse
+  useEffect(() => {
+    const check = () => setCollapsed(window.innerWidth < COLLAPSE_WIDTH)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
 
   // Theme-aware color tokens
-  const bg = isLight ? '#FFFFFF' : '#1A202C'
-  const border = isLight ? '#E2E8F0' : 'rgba(255,255,255,0.07)'
-  const textMuted = isLight ? '#718096' : '#718096'
-  const labelColor = isLight ? '#4A5568' : '#718096'
+  const bg = isLight ? '#202020' : '#452647'
+  const border = isLight ? '#222222' : 'rgba(255,255,255,0.07)'
+  const textMuted = isLight ? '#A0AEC0' : '#718096'
+  const labelColor = isLight ? '#FFFFFF' : '#FFFFFF'
 
   const toolbarStyle = {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: 8,
     padding: '10px 20px',
     background: bg,
@@ -59,14 +92,10 @@ export function Toolbar({
 
   // Pill button (Popular, Library, Scale Degrees)
   const pillBtn = (active = false) => ({
-    background: active
-      ? '#F6A623'
-      : (isLight ? '#F7FAFC' : 'rgba(255,255,255,0.08)'),
-    border: `1px solid ${active
-      ? '#F6A623'
-      : (isLight ? '#E2E8F0' : 'rgba(255,255,255,0.12)')}`,
-    borderRadius: 20,
-    color: active ? '#000' : (isLight ? '#2D3748' : '#CBD5E0'),
+    background: '#F6A623',
+    border: `2px solid ${isLight ? '#F6A623' : '#000000'}`,
+    borderRadius: 5,
+    color: '#000',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 600,
@@ -77,14 +106,15 @@ export function Toolbar({
     display: 'flex',
     alignItems: 'center',
     gap: 6,
+    opacity: active ? 1 : 0.85,
   })
 
   // Small round nav button (◀ ▶)
   const navBtn = {
-    background: isLight ? '#F7FAFC' : 'rgba(255,255,255,0.08)',
-    border: `1px solid ${isLight ? '#E2E8F0' : 'rgba(255,255,255,0.12)'}`,
-    borderRadius: '50%',
-    color: isLight ? '#4A5568' : '#A0AEC0',
+    background: '#F6A623',
+    border: `2px solid ${isLight ? '#F6A623' : '#000000'}`,
+    borderRadius: 5,
+    color: '#000',
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 700,
@@ -100,10 +130,10 @@ export function Toolbar({
 
   // Neck position badge
   const neckBadge = {
-    background: isLight ? '#EDF2F7' : 'rgba(255,255,255,0.06)',
-    border: `1px solid ${isLight ? '#CBD5E0' : 'rgba(255,255,255,0.1)'}`,
-    borderRadius: 8,
-    color: isLight ? '#2D3748' : '#E2E8F0',
+    background: '#000000',
+    border: '1px solid #F6A623',
+    borderRadius: 5,
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 700,
     minWidth: 34,
@@ -116,14 +146,10 @@ export function Toolbar({
 
   // Cards option button
   const cardBtn = (active: boolean) => ({
-    background: active
-      ? '#F6A623'
-      : (isLight ? '#F7FAFC' : 'rgba(255,255,255,0.06)'),
-    border: `1px solid ${active
-      ? '#F6A623'
-      : (isLight ? '#E2E8F0' : 'rgba(255,255,255,0.1)')}`,
-    borderRadius: 8,
-    color: active ? '#000' : (isLight ? '#718096' : '#718096'),
+    background: active ? '#F6A623' : '#000000',
+    border: `${active && !isLight ? '2px' : '1px'} solid ${active && !isLight ? '#000000' : '#F6A623'}`,
+    borderRadius: 5,
+    color: active ? '#000' : '#FFFFFF',
     cursor: 'pointer',
     fontSize: 12,
     fontWeight: active ? 700 : 500,
@@ -135,7 +161,7 @@ export function Toolbar({
   const divider = {
     width: 1,
     height: 22,
-    background: isLight ? '#E2E8F0' : 'rgba(255,255,255,0.08)',
+    background: 'rgba(246,166,35,0.3)',
     margin: '0 4px',
     flexShrink: 0,
   }
@@ -149,113 +175,119 @@ export function Toolbar({
     whiteSpace: 'nowrap' as const,
   }
 
+  // All the toolbar controls as a fragment — used in both full and menu views
+  const controls = (inMenu = false) => {
+    const wrap = inMenu
+      ? { display: 'flex', flexDirection: 'column' as const, gap: 8, padding: '12px 0' }
+      : { display: 'contents' }
+    return (
+      <div style={wrap}>
+        <button style={pillBtn()} onClick={() => { onOpenPopular(); setMenuOpen(false) }} data-testid="open-popular-btn" aria-label="Open popular progressions">Popular</button>
+        {onToggleLibrary && <button style={pillBtn(libraryOpen)} onClick={() => { onToggleLibrary!(); setMenuOpen(false) }} data-testid="toggle-library-btn" aria-label={libraryOpen ? 'Close library' : 'Open library'}>Library</button>}
+        {!inMenu && <div style={divider} />}
+        {onOpenScaleDegrees && <button style={{ ...pillBtn(), background: '#F6A623', border: `2px solid ${isLight ? '#F6A623' : '#000000'}`, color: '#000' }} onClick={() => { onOpenScaleDegrees!(); setMenuOpen(false) }} data-testid="open-scale-degrees-btn" aria-label="Open scale degree controls">Scale Degrees</button>}
+        {!inMenu && <div style={divider} />}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <span style={label}>Key</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button style={navBtn} onClick={onTransposeDown} data-testid="transpose-down-btn" aria-label="Transpose down">◀</button>
+            <div style={neckBadge} data-testid="current-key-display">{currentKey}</div>
+            <button style={navBtn} onClick={onTransposeUp} data-testid="transpose-up-btn" aria-label="Transpose up">▶</button>
+          </div>
+        </div>
+        {!inMenu && <div style={divider} />}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <span style={label}>Neck</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button style={navBtn} onClick={onNeckDown} data-testid="neck-down-btn" aria-label="Previous neck position">◀</button>
+            <div style={neckBadge} data-testid="neck-position-display">{neckPosition}</div>
+            <button style={navBtn} onClick={onNeckUp} data-testid="neck-up-btn" aria-label="Next neck position">▶</button>
+          </div>
+        </div>
+        {!inMenu && <div style={divider} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={label}>Cards</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {CARD_OPTIONS.map(n => (
+              <button key={n} style={cardBtn(cardCount === n)} onClick={() => { onSetCardCount(n); setMenuOpen(false) }} aria-label={`Show ${n} cards`} aria-pressed={cardCount === n} data-testid={`card-count-${n}`}>{n}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={toolbarStyle} data-testid="toolbar">
-
-      {/* ── Popular ─────────────────────────────────────────── */}
-      <button
-        style={pillBtn()}
-        onClick={onOpenPopular}
-        data-testid="open-presets-btn"
-        aria-label="Open popular progressions"
-      >
-        ⭐ Popular
-      </button>
-
-      {/* ── Library ─────────────────────────────────────────── */}
-      {onToggleLibrary && (
-        <button
-          style={pillBtn(libraryOpen)}
-          onClick={onToggleLibrary}
-          data-testid="toggle-library-btn"
-          aria-label={libraryOpen ? 'Close library' : 'Open library'}
-        >
-          📚 Library
-        </button>
-      )}
-
-      <div style={divider} />
-
-      {/* ── Scale Degree Controls ───────────────────────────── */}
-      {onOpenScaleDegrees && (
+      {collapsed ? (
+        // ── Hamburger mode ──────────────────────────────────
         <>
-          <button
-            style={{
-              ...pillBtn(),
-              background: '#F6A623',
-              border: '1px solid #F6A623',
-              color: '#000',
-            }}
-            onClick={onOpenScaleDegrees}
-            data-testid="scale-degrees-btn"
-            aria-label="Open scale degree controls"
-          >
-            🎚 Scale Degree Controls
-          </button>
-          <div style={divider} />
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              aria-label="Open menu"
+              style={{
+                background: '#F6A623',
+                border: `2px solid ${isLight ? '#F6A623' : '#000000'}`,
+                borderRadius: 5,
+                color: '#000',
+                cursor: 'pointer',
+                fontSize: 18,
+                padding: '6px 12px',
+                lineHeight: 1,
+              }}
+            >
+              ☰
+            </button>
+            {menuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: 6,
+                background: bg,
+                border: `1px solid ${isLight ? '#E2E8F0' : 'rgba(255,255,255,0.12)'}`,
+                borderRadius: 5,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                padding: '8px 16px',
+                zIndex: 1000,
+                minWidth: 240,
+              }}>
+                {controls(true)}
+              </div>
+            )}
+          </div>
+
+          {/* ── Key + Neck controls — always visible on mobile ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginLeft: 8 }}>
+            <span style={label}>Key</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button style={navBtn} onClick={onTransposeDown} data-testid="transpose-down-btn" aria-label="Transpose down">◀</button>
+              <div style={neckBadge} data-testid="current-key-display">{currentKey}</div>
+              <button style={navBtn} onClick={onTransposeUp} data-testid="transpose-up-btn" aria-label="Transpose up">▶</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, marginLeft: 8 }}>
+            <span style={label}>Neck</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button style={navBtn} onClick={onNeckDown} data-testid="neck-down-btn" aria-label="Previous neck position">◀</button>
+              <div style={neckBadge} data-testid="neck-position-display">{neckPosition}</div>
+              <button style={navBtn} onClick={onNeckUp} data-testid="neck-up-btn" aria-label="Next neck position">▶</button>
+            </div>
+          </div>
+        </>
+      ) : (
+        // ── Full toolbar mode ────────────────────────────────
+        <>
+          {controls(false)}
         </>
       )}
 
-      {/* ── Neck Position ───────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={label}>Neck Position</span>
-        <button
-          style={navBtn}
-          onClick={onNeckDown}
-          data-testid="neck-down-btn"
-          aria-label="Previous neck position"
-        >
-          ◀
-        </button>
-        <div style={neckBadge} data-testid="neck-position">
-          {neckPosition}
-        </div>
-        <button
-          style={navBtn}
-          onClick={onNeckUp}
-          data-testid="neck-up-btn"
-          aria-label="Next neck position"
-        >
-          ▶
-        </button>
-      </div>
-
-      <div style={divider} />
-
-      {/* ── Cards ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={label}>Cards</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {CARD_OPTIONS.map(n => (
-            <button
-              key={n}
-              style={cardBtn(cardCount === n)}
-              onClick={() => onSetCardCount(n)}
-              aria-label={`Show ${n} cards`}
-              aria-pressed={cardCount === n}
-              data-testid={`card-count-${n}`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── Theme toggle ────────────────────────────────────── */}
+      {/* ── Theme toggle — always visible ───────────────────── */}
       {onToggleTheme && (
-        <>
-          <div style={{ ...divider, marginLeft: 'auto' }} />
+        <div style={{ marginLeft: 'auto' }}>
           <button
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 18,
-              padding: '2px 6px',
-              borderRadius: 6,
-              transition: 'transform 0.2s',
-              color: textMuted,
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: '2px 6px', borderRadius: 5, transition: 'transform 0.2s', color: textMuted }}
             onClick={onToggleTheme}
             data-testid="theme-toggle-btn"
             aria-label={themeKey === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -263,10 +295,8 @@ export function Toolbar({
           >
             {themeKey === 'dark' ? '☀️' : '🌙'}
           </button>
-        </>
+        </div>
       )}
     </div>
   )
 }
-
-export default Toolbar

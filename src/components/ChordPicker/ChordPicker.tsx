@@ -71,11 +71,20 @@ export function ChordPicker({ currentRoot, currentQuality, onSelect, onClose }: 
   }, [handleKeyDown])
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation()
     if (e.target === e.currentTarget) onClose()
   }
 
-  const handleConfirm = () => {
-    onSelect(root, quality)
+  const handleRootClick = (newRoot: NoteRoot, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRoot(newRoot)
+    onSelect(newRoot, quality)
+  }
+
+  const handleQualityClick = (newQuality: ChordQuality, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setQuality(newQuality)
+    onSelect(root, newQuality)
     onClose()
   }
 
@@ -138,24 +147,13 @@ export function ChordPicker({ currentRoot, currentQuality, onSelect, onClose }: 
               Key & Type
             </div>
           </div>
-          <button
-            onClick={handleConfirm}
-            data-testid="confirm-btn"
-            style={{
-              background: activeQualityColor,
-              border: 'none',
-              borderRadius: 20,
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 700,
-              padding: '10px 22px',
-              transition: 'all 0.15s',
-              boxShadow: `0 4px 14px ${activeQualityColor}66`,
-            }}
-          >
-            Done
-          </button>
+          <div style={{
+            fontSize: 12,
+            color: '#6B7280',
+            fontStyle: 'italic',
+          }}>
+            tap quality to confirm
+          </div>
         </div>
 
         {/* ── White body ──────────────────────────────────── */}
@@ -186,14 +184,14 @@ export function ChordPicker({ currentRoot, currentQuality, onSelect, onClose }: 
               return (
                 <button
                   key={noteRoot}
-                  onClick={() => setRoot(noteRoot)}
+                  onClick={e => handleRootClick(noteRoot, e)}
                   aria-label={`Root ${label}`}
                   aria-pressed={isActive}
                   data-testid={`root-btn-${noteRoot}`}
                   style={{
                     background: isActive ? activeQualityColor : '#F3F4F6',
                     border: `2px solid ${isActive ? activeQualityColor : 'transparent'}`,
-                    borderRadius: 10,
+                    borderRadius: 5,
                     color: isActive ? '#fff' : '#374151',
                     cursor: 'pointer',
                     fontSize: 14,
@@ -231,7 +229,7 @@ export function ChordPicker({ currentRoot, currentQuality, onSelect, onClose }: 
               return (
                 <button
                   key={value}
-                  onClick={() => setQuality(value)}
+                  onClick={e => handleQualityClick(value, e)}
                   aria-label={label}
                   aria-pressed={isActive}
                   data-testid={`quality-btn-${value}`}
@@ -239,7 +237,7 @@ export function ChordPicker({ currentRoot, currentQuality, onSelect, onClose }: 
                     flex: 1,
                     background: isActive ? color : '#F3F4F6',
                     border: `2px solid ${isActive ? color : 'transparent'}`,
-                    borderRadius: 10,
+                    borderRadius: 5,
                     color: isActive ? '#fff' : '#374151',
                     cursor: 'pointer',
                     fontSize: 14,

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { MouseEvent } from 'react'
 import { PRESETS } from '../../constants/presets'
 import type { Progression } from '../../types'
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -102,7 +103,7 @@ export function PresetPicker({ onSelect, onClose }: PresetPickerProps) {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleOverlayClick = (e: MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose()
   }
   const handleSelect = (preset: typeof PRESETS[0]) => {
@@ -161,7 +162,7 @@ function PresetRow({
   index: number
   onSelect: (p: Progression) => void
 }) {
-  const [hovered, setHovered] = React.useState(false)
+  const [hovered, setHovered] = useState(false)
   return (
     <div
       style={S.row(hovered)}

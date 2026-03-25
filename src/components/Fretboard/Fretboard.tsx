@@ -9,6 +9,7 @@ export type FretboardProps = {
   height?: number
   startFret?: number
   themeKey?: 'dark' | 'light'
+  style?: React.CSSProperties
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -54,27 +55,27 @@ const DOUBLE_MARKERS = new Set([12, 24])
 const LIGHT_FB = {
   boardBg: '#F5E6C8',        // warm wood tone
   boardBg2: '#EDD9A3',       // second gradient stop
-  fretLine: '#8B7355',       // dark wood fret lines
+  fretLine: '#6B5A3E',       // darker fret lines
   firstFretLine: '#5C4A2A',  // darker nut
-  string: '#8B7355',         // warm string color
+  string: '#5C4A2A',         // darker string color
   marker: '#8B7355',
   markerOpacity: 0.25,
-  fretLabel: '#8B7355',
-  stringLabel: '#8B7355',
+  fretLabel: '#000000',
+  stringLabel: '#000000',
   dotStroke: 'rgba(0,0,0,0.15)',
 }
 
 const DARK_FB = {
-  boardBg: '#1e2535',
-  boardBg2: '#1a2035',
-  fretLine: '#CBD5E0',
-  firstFretLine: '#A0AEC0',
-  string: '#718096',
-  marker: '#4A5568',
-  markerOpacity: 0.4,
-  fretLabel: '#718096',
-  stringLabel: '#718096',
-  dotStroke: 'rgba(255,255,255,0.1)',
+  boardBg: '#F5E6C8',        // warm wood tone (same as light)
+  boardBg2: '#EDD9A3',       // second gradient stop (same as light)
+  fretLine: '#6B5A3E',       // darker fret lines (same as light)
+  firstFretLine: '#5C4A2A',  // darker nut (same as light)
+  string: '#5C4A2A',         // darker string color (same as light)
+  marker: '#8B7355',
+  markerOpacity: 0.25,
+  fretLabel: '#FFFFFF',
+  stringLabel: '#FFFFFF',
+  dotStroke: 'rgba(0,0,0,0.15)',
 }
 
 // ─── Layout helpers ──────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export function Fretboard({
   height = 160,
   startFret,
   themeKey = 'dark',
+  style,
 }: FretboardProps) {
   const fb = themeKey === 'light' ? LIGHT_FB : DARK_FB
 
@@ -144,14 +146,15 @@ export function Fretboard({
   }
 
   function stringStrokeWidth(stringNumber: number): number {
-    return 0.6 + ((stringNumber - 1) / (NUM_STRINGS - 1)) * 1.8
+    // Gradual taper: string 1 (high e) = 0.5px, string 6 (low E) = 3.0px
+    return 0.5 + ((stringNumber - 1) / (NUM_STRINGS - 1)) * 2.5
   }
 
   function slotCenterX(fretNum: number): number {
     return fretX(fretNum) + slotWidth / 2
   }
 
-  const dotRadius = Math.min(slotWidth, stringSpacing) * 0.36
+  const dotRadius = Math.min(slotWidth, stringSpacing) * 0.44
   const gradId = `fbGrad-${shape.label.replace(/\s/g, '')}`
 
   return (
@@ -161,6 +164,7 @@ export function Fretboard({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={`Guitar fretboard: ${shape.label}`}
+      style={style}
     >
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -183,14 +187,32 @@ export function Fretboard({
       {[...fretWindow, fretWindow[fretWindow.length - 1] + 1].map((_, idx) => {
         const x = marginLeft + idx * slotWidth
         const isFirst = idx === 0
+        const showNut = isFirst && fretWindow[0] <= 1
+
+        if (showNut) {
+          // Solid nut bar
+          const nutWidth = 6
+          return (
+            <rect
+              key="nut"
+              x={x - nutWidth / 2}
+              y={marginTop}
+              width={nutWidth}
+              height={boardHeight}
+              fill={themeKey === 'light' ? '#2D2014' : '#0a0a0a'}
+              rx={1}
+            />
+          )
+        }
+
         return (
           <line
             key={`fret-line-${idx}`}
             x1={x} y1={marginTop}
             x2={x} y2={marginTop + boardHeight}
-            stroke={isFirst ? fb.firstFretLine : fb.fretLine}
-            strokeWidth={isFirst ? 3 : 1}
-            opacity={isFirst ? 1 : 0.5}
+            stroke={fb.fretLine}
+            strokeWidth={2}
+            opacity={0.8}
           />
         )
       })}
@@ -205,7 +227,7 @@ export function Fretboard({
             x2={marginLeft + boardWidth} y2={y}
             stroke={fb.string}
             strokeWidth={stringStrokeWidth(stringNum)}
-            opacity={0.7}
+            opacity={0.9}
             data-testid={`string-line-${stringNum}`}
           />
         )
@@ -222,11 +244,11 @@ export function Fretboard({
             y={y}
             textAnchor="end"
             dominantBaseline="middle"
-            fontSize={9}
+            fontSize={13}
             fill={fb.stringLabel}
-            fontWeight="600"
+            fontWeight="800"
             fontFamily="monospace"
-            opacity={0.8}
+            opacity={0.9}
           >
             {label}
           </text>
@@ -243,11 +265,11 @@ export function Fretboard({
           <g key={`marker-${fretNum}`}>
             {isDouble ? (
               <>
-                <circle cx={x} cy={midY - stringSpacing} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
-                <circle cx={x} cy={midY + stringSpacing} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
+                <circle cx={x} cy={midY - stringSpacing} r={5.5} fill={fb.marker} opacity={fb.markerOpacity} />
+                <circle cx={x} cy={midY + stringSpacing} r={5.5} fill={fb.marker} opacity={fb.markerOpacity} />
               </>
             ) : (
-              <circle cx={x} cy={midY} r={3.5} fill={fb.marker} opacity={fb.markerOpacity} />
+              <circle cx={x} cy={midY} r={5.5} fill={fb.marker} opacity={fb.markerOpacity} />
             )}
           </g>
         )
@@ -256,15 +278,16 @@ export function Fretboard({
       {/* ── Fret number labels ──────────────────────────────── */}
       {fretWindow.map(fretNum => {
         const x = slotCenterX(fretNum)
-        const y = height - 6
+        const y = height - 2
         return (
           <text
             key={`fret-label-${fretNum}`}
             x={x} y={y}
             textAnchor="middle"
-            fontSize={9}
+            fontSize={13}
+            fontWeight="800"
             fill={fb.fretLabel}
-            opacity={0.8}
+            opacity={0.9}
           >
             {fretNum}
           </text>
@@ -295,15 +318,15 @@ export function Fretboard({
               <circle
                 cx={cx} cy={cy} r={dotRadius}
                 fill={visible ? color : '#222222'}
-                stroke={fb.dotStroke}
-                strokeWidth={1}
+                stroke={!visible ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.7)'}
+                strokeWidth={1.5}
               />
               {visible && (
                 <text
                   x={cx} y={cy + 0.5}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize={dotRadius * 1.0}
+                  fontSize={dotRadius * 1.4}
                   fill="white"
                   fontWeight="bold"
                   style={{ userSelect: 'none', pointerEvents: 'none' }}

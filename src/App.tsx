@@ -9,7 +9,7 @@ import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary'
 function AppInner() {
   const initSavedProgressions = useSessionStore(s => s.initSavedProgressions)
   const setAdminMode = useSessionStore(s => s.setAdminMode)
-  const { theme } = useTheme()
+  const { theme, themeKey } = useTheme()
 
   useEffect(() => {
     initSavedProgressions()
@@ -26,18 +26,29 @@ function AppInner() {
       transition: 'background 0.2s, color 0.2s',
     }}>
       <header style={{
-        padding: '12px 20px',
+        padding: '8px 20px',
         borderBottom: `1px solid ${theme.borderSubtle}`,
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
-        background: theme.surface,
+        display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0,
+        background: '#000000',
       }}>
-        <span style={{ fontSize: 20 }}>🎸</span>
-        <h1 style={{
-          margin: 0, fontSize: 15, fontWeight: 700,
-          letterSpacing: '-0.02em', color: theme.text, flex: 1,
-        }}>
-          Pentatonic Fretboard Visualizer
-        </h1>
+        <img
+          src="https://pentatonicway.com/wp-content/uploads/2025/09/The-Pentatonic-Way-Travelers-White-Logo.png"
+          alt="The Pentatonic Way Travelers"
+          style={{ height: 48, width: 'auto', display: 'block' }}
+        />
+        <a
+          href="https://members.pentatonicway.com/"
+          style={{
+            color: '#F6A623',
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textDecoration: 'none',
+            textTransform: 'uppercase' as const,
+          }}
+        >
+          Dashboard
+        </a>
       </header>
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <ErrorBoundary>

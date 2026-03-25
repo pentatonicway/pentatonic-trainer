@@ -11,9 +11,6 @@ export type ScaleDegreeModalProps = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PENTATONIC_DEGREES: ScaleDegree[] = ['1', 'b3', '4', '5', 'b7']
-const EXTRA_DEGREES: ScaleDegree[] = ['2', 'b5', '3', 'b6', '6', '7']
-
 const DEGREE_META: Record<ScaleDegree, { color: string; label: string; name: string }> = {
   '1':  { color: '#E53E3E', label: 'R',  name: 'Root'        },
   'b3': { color: '#6B46C1', label: 'b3', name: 'Minor 3rd'   },
@@ -52,7 +49,8 @@ export function ScaleDegreeModal({ onClose, themeKey = 'light' }: ScaleDegreeMod
     return boxes.every(b => b.scaleDegreeVisibility[degree])
   }
 
-  const allOn = PENTATONIC_DEGREES.concat(EXTRA_DEGREES).every(isDegreeOn)
+  const ALL_DEGREES = Object.keys(DEGREE_META) as ScaleDegree[]
+  const allOn = ALL_DEGREES.every(isDegreeOn)
 
   // Theme tokens
   const bodyBg   = isLight ? '#FFFFFF' : '#1A202C'
@@ -205,7 +203,7 @@ export function ScaleDegreeModal({ onClose, themeKey = 'light' }: ScaleDegreeMod
         {/* ── Body ──────────────────────────────────────────── */}
         <div style={{ padding: '20px 24px 24px', background: bodyBg }}>
 
-          {/* Pentatonic degrees */}
+          {/* All degrees in order */}
           <div style={{
             fontSize: 10,
             fontWeight: 700,
@@ -214,7 +212,7 @@ export function ScaleDegreeModal({ onClose, themeKey = 'light' }: ScaleDegreeMod
             color: textMuted,
             marginBottom: 12,
           }}>
-            Pentatonic Degrees
+            Scale Degrees
           </div>
           <div style={{
             background: sectionBg,
@@ -227,32 +225,9 @@ export function ScaleDegreeModal({ onClose, themeKey = 'light' }: ScaleDegreeMod
             marginBottom: 16,
             flexWrap: 'wrap' as const,
           }}>
-            {PENTATONIC_DEGREES.map(d => <DegreeButton key={d} degree={d} />)}
-          </div>
-
-          {/* Extra degrees */}
-          <div style={{
-            fontSize: 10,
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase' as const,
-            color: textMuted,
-            marginBottom: 12,
-          }}>
-            Additional Degrees
-          </div>
-          <div style={{
-            background: sectionBg,
-            borderRadius: 12,
-            border: `1px solid ${borderColor}`,
-            padding: '14px 12px',
-            display: 'flex',
-            gap: 8,
-            justifyContent: 'center',
-            marginBottom: 20,
-            flexWrap: 'wrap' as const,
-          }}>
-            {EXTRA_DEGREES.map(d => <DegreeButton key={d} degree={d} />)}
+            {(['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'] as ScaleDegree[])
+              .filter(d => d in DEGREE_META)
+              .map(d => <DegreeButton key={d} degree={d} />)}
           </div>
 
           {/* Note */}

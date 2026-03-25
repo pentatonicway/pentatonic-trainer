@@ -1,5 +1,5 @@
 export const DARK_THEME = {
-  bg: '#1A202C',
+  bg: 'rgb(45, 55, 72)',
   surface: '#2D3748',
   surfaceRaised: '#1a2035',
   border: '#4A5568',
@@ -19,7 +19,7 @@ export const DARK_THEME = {
 } as const
 
 export const LIGHT_THEME = {
-  bg: '#F7FAFC',
+  bg: '#E5E5E5',
   surface: '#FFFFFF',
   surfaceRaised: '#EDF2F7',
   border: '#CBD5E0',
@@ -38,7 +38,7 @@ export const LIGHT_THEME = {
   shadow: '0 4px 20px rgba(0,0,0,0.12)',
 } as const
 
-export type Theme = typeof DARK_THEME
+export type Theme = Record<keyof typeof DARK_THEME, string>
 export type ThemeKey = 'dark' | 'light'
 
 export const THEMES: Record<ThemeKey, Theme> = {

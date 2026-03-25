@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import type { Theme, ThemeKey } from './theme'
 import { THEMES } from './theme'
 
