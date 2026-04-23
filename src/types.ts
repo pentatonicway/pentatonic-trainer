@@ -1,14 +1,39 @@
 export type ChordQuality = "major" | "minor" | "dominant";
 
 export type NoteRoot =
-  | "A" | "A#" | "Bb" | "B" | "C" | "C#" | "Db"
-  | "D" | "D#" | "Eb" | "E" | "F" | "F#" | "Gb"
-  | "G" | "G#" | "Ab";
+  | "A"
+  | "A#"
+  | "Bb"
+  | "B"
+  | "C"
+  | "C#"
+  | "Db"
+  | "D"
+  | "D#"
+  | "Eb"
+  | "E"
+  | "F"
+  | "F#"
+  | "Gb"
+  | "G"
+  | "G#"
+  | "Ab";
 
-export type ScaleDegree = "1" | "2" | "b3" | "3" | "4" | "b5" | "5" | "b6" | "6" | "b7" | "7";
+export type ScaleDegree =
+  | "1"
+  | "2"
+  | "b3"
+  | "3"
+  | "4"
+  | "b5"
+  | "5"
+  | "b6"
+  | "6"
+  | "b7"
+  | "7";
 
 export type StringFretDot = {
-  fret: number;        // absolute fret number (0 = open)
+  fret: number; // absolute fret number (0 = open)
   degree: ScaleDegree;
 };
 
@@ -20,7 +45,7 @@ export type GuitarString = {
 export type ShapeData = {
   id: string;
   label: string;
-  baseFret: number;       // lowest fret in the shape
+  baseFret: number; // lowest fret in the shape
   strings: GuitarString[];
 };
 
@@ -39,6 +64,7 @@ export type Progression = {
   name: string;
   boxes: BoxData[];
   thumbnail?: string;
+  searchTerm?: string;
 };
 
 export type OverrideRule = {
